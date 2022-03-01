@@ -1,2 +1,14 @@
 # p057p034
-Data and code for manuscript number p057p034
+
+Code for Kuey et al. manuscript `#p057p034`
+
+**Inducing clathrin-coated pit formation on mitochondria**
+
+Cansu Kuey, Méghane Sittewelle, Gabrielle Larocque, Miguel Hernández-González & Stephen J. Royle
+
+*bioRxiv* (2022)
+
+## Scripts
+
+-  `MitoPits.ipf` Igor code to analyse line profiles through MitoPits.
+- `SpotSize.ipf` Igor code to calculate spot size for hot-wired CME/dynole experiments.
