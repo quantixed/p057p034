@@ -2,11 +2,11 @@
 
 Code for Kuey et al. manuscript `#p057p034`
 
-**Inducing clathrin-coated pit formation on mitochondria**
+**Recruitment of clathrin to intracellular membranes is sufficient for vesicle formation**
 
 Cansu Kuey, Méghane Sittewelle, Gabrielle Larocque, Miguel Hernández-González & Stephen J. Royle
 
-*bioRxiv* (2022)
+*bioRxiv* [doi: 10.1101/2022.03.21.485220](https://doi.org/10.1101/2022.03.21.485220)
 
 ## R
 
