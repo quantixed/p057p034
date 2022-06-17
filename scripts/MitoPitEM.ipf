@@ -3,6 +3,7 @@
 
 // IMOD models converted using model2point are the input here.
 // This procedure is a fork of LiposomeEM.ipf
+// For curvature analysis, rois from ImageJ were exported with save_rois_csv.py
 
 ////////////////////////////////////////////////////////////////////////
 // Menu items
@@ -10,6 +11,7 @@
 Menu "Macros"
 	Submenu	"MPDV Analysis"
 		"Load IMOD Models...", /Q, IMODModelAnalysis()
+		"Mitochondria Curvature...", /Q, CurvatureAnalysis()
 		"Start Over", /Q, CleanSlate()
 	End
 End
@@ -20,6 +22,7 @@ End
 Function IMODModelAnalysis()
 	PreLoader()
 End
+
 // we stop beween these two. User input needed.
 Function TheLoader()
 	LoadIMODModels()
@@ -34,6 +37,15 @@ Function TheProcessor()
 	CollectAllMeasurements()
 	MakeTheLayouts("MPDV",5,3, alphaSort = 1, saveIt = 0)
 	MakeTheLayouts("p",5,3, rev = 1, saveIt = 0)
+End
+
+Function CurvatureAnalysis()
+	LoadCSVFiles()
+	// negative or positive info is in
+	LoadWave/P=expDiskFolder/A/J/W/K=0/O "negorPos.txt"
+	ProcessCurves()
+	FixPolarity()
+	CalcAndDisplayJK()
 End
 
 ////////////////////////////////////////////////////////////////////////
@@ -58,6 +70,34 @@ Function PreLoader()
 	Wave/T fileNameFWave = ListToTextWave(fileList,";")
 	MoveWave fileNameFWave, root:fileNameFWave // save a copy in root
 	TheLoader()
+End
+
+STATIC Function LoadCSVFiles()
+	NewPath/O/Q/M="Please find disk folder" expDiskFolder
+	if (V_flag != 0)
+		DoAlert 0, "Disk folder error"
+		Return -1
+	endif
+	
+	PathInfo/S expDiskFolder
+	Make/O/N=1/T pathWave = {S_path}	
+	
+	String FileList, ThisFile
+	Variable FileLoop
+	
+	FileList = IndexedFile(expDiskFolder,-1,".csv")
+	Variable nFiles = ItemsInList(FileList)
+	Make/O/N=(nFiles)/T fileNameWave
+	
+	NewDataFolder/O/S root:data
+	
+	for (FileLoop = 0; FileLoop < nFiles; FileLoop += 1)
+		ThisFile = StringFromList(FileLoop, FileList)
+		fileNameWave[fileLoop] = ReplaceString(".csv",ThisFile,"")
+		LoadWave/A=lineData/D/J/K=1/M/L={0,0,0,0,0}/P=expDiskFolder/Q ThisFile
+	endfor
+	
+	SetDataFolder root:
 End
 
 Function LoadIMODModels()
@@ -484,6 +524,126 @@ STATIC Function CollectAllMeasurements()
 	Label/W=p_Img_VsMean2R left "Diameter (nm)"
 	Label/W=p_Img_VsPerimeter left "Perimeter (nm)"
 	SetDataFolder root:
+End
+
+Function ProcessCurves()
+	SetDataFolder root:data:
+	String wList = WaveList("lineData*",";","")
+	Variable nWaves = ItemsInList(wList)
+	Make/O/N=(nWaves)/D $("root:radiiW")
+	Wave resultW = $("root:radiiW")
+	
+	Variable i
+	
+	for(i = 0; i < nWaves; i += 1)
+		Duplicate/O/FREE $(StringFromList(i, wList)), lW
+		lW *= (200 / 461)
+		resultW[i] = FitCircleTo2DCoords(lW)
+	endfor
+	
+	SetDataFolder root:
+End
+
+STATIC Function FitCircleTo2DCoords(w)
+	Wave w
+	// requires 2D numeric wave with two columnns corresponding to xy coords
+	if(Dimsize(w,1) != 2)
+		return -1
+	endif
+	// make two 1D waves for x and y coords
+	SplitWave/O/NAME="xW;yW;" w
+	Wave xW,yW
+	// solve in terms of u and v coordinates
+	Duplicate/O xw, uW
+	Duplicate/O yw, vW
+	uW[] = xw[p] - mean(xw)
+	vW[] = yw[p] - mean(yw)
+	// sigma calcs - store as variables for clean code
+	Variable Su = sum(uW)
+	Variable Sv = sum(vW)
+	MatrixOp/O/FREE uu = uW * uW
+	Variable Suu = sum(uu)
+	MatrixOp/O/FREE vv = vW * vW
+	Variable Svv = sum(vv)
+	MatrixOp/O/FREE uv = uW * vW
+	Variable Suv = sum(uv)
+	MatrixOp/O/FREE uuu = uW * uW * uW
+	Variable Suuu = sum(uuu)
+	MatrixOp/O/FREE uvv = uW * vW * vW
+	Variable Suvv = sum(uvv)
+	MatrixOp/O/FREE vvv = vW * vW * vW
+	Variable Svvv = sum(vvv)
+	MatrixOp/O/FREE vuu = vW * uW * uW
+	Variable Svuu = sum(vuu)
+	// linear system
+	Make/O/N=(2,2) matA = {{Suu,Suv},{Suv,Svv}}
+	Make/O/N=(2,1) matB = {0.5 * (Suuu + Suvv),0.5 * (Svvv + Svuu)}
+	// Solve it. matB is overwritten with the result uc,vc
+	MatrixLinearSolve/O matA matB
+	// transform back to x y coordinate system to get xc,yc
+	Duplicate/O matB, matC
+	// matC is saved and contains the centre of the circle
+	matC[0] = matB[0] + mean(xW)
+	matC[1] = matB[1] + mean(yW)
+	// alpha is the radius squared
+	Variable alpha = matB[0]^2 + matB[1]^2 + ( (Suu + Svv) / numpnts(xW) )
+	// clean up 1D waves
+	KillWaves/Z xW,yW
+	
+	// return radius
+	return sqrt(alpha)
+End
+
+STATIC Function FixPolarity()
+	SetDataFolder root:
+	WAVE/Z radiiW
+	WAVE/Z/T fileNameWave, roiW, norpW
+	Variable nRow = numpnts(radiiW)
+	Duplicate/O/T/FREE roiW, roiNameW
+	roiNameW[] = ReplaceString(".roi",roiW[p],"")
+	
+	Variable i
+	
+	for(i = 0; i < nRow; i += 1)
+		FindValue/TEXT=fileNameWave[i] roiNameW
+		if(V_Row >= 0 && cmpstr(norpW[V_row],"n") == 0)
+			// reverse polarity
+			radiiW[i] *= -1			
+		endif
+	endfor
+End
+
+STATIC Function CalcAndDisplayJK()
+	SetDataFolder root:
+	WAVE/Z radiiW
+	Make/O/N=(numpnts(radiiW),2)/D jkW
+	// c = 1/r and c2 is the *other* curvature that we can't see. Take to be 250 nm.
+	// J = c1 + c2 total (not mean)
+	jkW[][0] = (1 / radiiW[p]) + (1 / 250)
+	// K = c1 * c2 gaussian
+	jkW[][1] = (1 / radiiW[p]) * (1 / 250)
+	// Markers for sphere, cylinder and saddle
+	Make/O/FREE junk={1/250,0,-1/250}
+	Make/O/N=(3,2)/D jkMarkerW
+	jkMarkerW[][0] = junk[p] + (1 / 250)
+	jkMarkerW[][1] = junk[p] * (1 / 250)
+	Make/O/FREE junk={1/100,1/35}
+	Make/O/N=(2,2)/D jkCailW
+	jkCailW[][0] = junk[p] + 0
+	jkCailW[][1] = junk[p] * 0
+	// make plot
+	String plotName = "p_curvature"
+	Display/N=$plotName jkW[][1] vs jkW[][0]
+	AppendToGraph/W=$plotName jkMarkerW[][1] vs jkMarkerW[][0]
+	AppendToGraph/W=$plotName jkCailW[][1] vs jkCailW[][0]
+	ModifyGraph/W=$plotName mode=3, marker(jkMarkerW)=19, marker(jkCailW) = 16
+	SetAxis/A/N=1/W=$plotName left
+	SetAxis/A/N=1/W=$plotName bottom
+	Label/W=$plotName  bottom "Total curvature (\\f02J\\f00)"
+	Label/W=$plotName  left "Gaussian curvature (\\f02K\\f00)"
+	// calculate fB
+//	Make/O/N=(DimSize(jkW,0))/D fBW
+//	fBW[] = 0.5 * kB * jkW[p][0]^2 + kappa * jkW[p][1]
 End
 
 ////////////////////////////////////////////////////////////////////////
