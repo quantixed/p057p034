@@ -1,6 +1,6 @@
 # p057p034
 
-Code for Kuey et al. manuscript `#p057p034`
+Code and data for Küey et al. manuscript `#p057p034`
 
 **Recruitment of clathrin to intracellular membranes is sufficient for vesicle formation**
 
@@ -10,6 +10,7 @@ Cansu Küey, Méghane Sittewelle, Gabrielle Larocque, Miguel Hernández-Gonzále
 
 ## Data
 
+- CD8Dynole - text files (Fig 5 - supp 1)
 - Clathrin - superplot data (Fig 3)
 - Dynamin - superplot data (Fig 5)
 - EM - IMOD models and text files (Fig 4)
@@ -18,7 +19,6 @@ Cansu Küey, Méghane Sittewelle, Gabrielle Larocque, Miguel Hernández-Gonzále
 - MitoPitLocations - raw counts (Fig 2)
 - MitoPitProfiles - 3 channel line profiles (Fig 1)
 - Vps4Actin - superplot data (Fig 5 - supp 2)
-- 
 
 ## R
 
@@ -27,6 +27,8 @@ Cansu Küey, Méghane Sittewelle, Gabrielle Larocque, Miguel Hernández-Gonzále
 ## Scripts
 
 - `ImageJ_Mitopits_FreeSpotsQuantification.ijm` ImageJ macro to quantify number of free spots for EpsinKD and FchoKO experiments.
-- `MitoPitEM.ipf` Igor code to quantify diameter of MitoPits from EM images (in `Data/EM`).
-- `MitoPits.ipf` Igor code to analyse line profiles through MitoPits (in `Data/MitoPitLocations`).
-- `SpotSize.ipf` Igor code to calculate spot size for hot-wired CME/dynole experiments. 
+- `MitoPitEM.ipf` Igor code to quantify diameter of MitoPits from EM images (in `Data/EM/`).
+- `MitoPits.ipf` Igor code to analyse line profiles through MitoPits (in `Data/MitoPitLocations/`).
+- `SpotSize.ipf` Igor code to calculate spot size for hot-wired CME/dynole experiments (in `Data/CD8Dynole/`).
+
+Superplots are generated using [SuperPlot](https://github.com/quantixed/SuperPlot) in IgorPro.
