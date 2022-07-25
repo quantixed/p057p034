@@ -6,7 +6,7 @@ Code for Kuey et al. manuscript `#p057p034`
 
 Cansu Kuey, Méghane Sittewelle, Gabrielle Larocque, Miguel Hernández-González & Stephen J. Royle
 
-*bioRxiv* [doi: 10.1101/2022.03.21.485220](https://doi.org/10.1101/2022.03.21.485220)
+*eLife* 2022;11:e78929. [DOI: https://doi.org/10.7554/eLife.78929](https://doi.org/10.7554/eLife.78929)
 
 ## R
 
